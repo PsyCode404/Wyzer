@@ -1,0 +1,107 @@
+# Wyzer Application Pages Summary
+
+## 🔐 Authentication Pages
+
+### LoginPage
+✅ Name: Login Page
+📄 Purpose: Allows existing users to access their accounts
+🔗 Navigation:
+  - Register button → RegisterPage
+  - Forgot password link
+✨ Features:
+  - Email/password login form
+  - Remember me option
+  - Form validation
+
+### RegisterPage
+✅ Name: Registration Page
+📄 Purpose: Enables new users to create an account
+🔗 Navigation:
+  - Login link → LoginPage
+  - Continue button → OnboardingPage
+✨ Features:
+  - Registration form with email/password
+  - Password strength indicator
+  - Form validation
+  - Responsive design with illustration
+
+### OnboardingPage
+✅ Name: User Onboarding
+📄 Purpose: Collects initial user preferences and settings
+🔗 Navigation:
+  - Back/Continue navigation buttons
+  - Final step → DashboardPage
+✨ Features:
+  - 3-step onboarding flow
+    1. Name input
+    2. Currency selection with flags
+    3. Categories setup
+  - Progress indicator with step icons
+  - Form validation at each step
+  - Smooth transitions and hover effects
+
+## 📊 Main Pages
+
+### DashboardPage
+✅ Name: Dashboard
+📄 Purpose: Main overview of user's financial status
+✨ Features:
+  - Financial overview widgets
+  - Recent transactions
+  - Budget progress
+  - Quick actions
+
+### TransactionPage
+✅ Name: Transactions
+📄 Purpose: Manage and view all transactions
+✨ Features:
+  - Transaction list with filters
+  - Add/Edit transaction forms
+  - Search and filtering options
+  - Transaction categories
+
+### RecurringTransactionsPage
+✅ Name: Recurring Transactions
+📄 Purpose: Manage recurring payments and income
+✨ Features:
+  - List of recurring transactions
+  - Add/Edit recurring transaction form
+  - Frequency settings
+  - Status indicators
+
+### ReportsPage
+✅ Name: Financial Reports
+📄 Purpose: View financial analytics and reports
+✨ Features:
+  - Various financial charts
+  - Expense breakdown
+  - Income analysis
+  - Custom date ranges
+
+### CategoriesPage
+✅ Name: Categories Management
+📄 Purpose: Manage transaction categories
+✨ Features:
+  - Category list
+  - Add/Edit categories
+  - Category icons
+  - Budget allocation
+
+## ⚙️ User Settings
+
+### ProfilePage
+✅ Name: User Profile
+📄 Purpose: Manage user profile information
+✨ Features:
+  - Personal information form
+  - Profile picture
+  - Notification preferences
+
+### SettingsPage
+✅ Name: Application Settings
+📄 Purpose: Configure app preferences
+✨ Features:
+  - Currency settings
+  - Language preferences
+  - Theme options
+  - Notification settings
