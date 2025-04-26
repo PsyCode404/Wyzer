@@ -104,23 +104,72 @@ const RecurringTransactionsPage = () => {
 
   const handleSubmit = async (values) => {
     try {
-      if (editingTransaction) {
-        // Update existing recurring transaction
-        const result = await updateRecurringTransaction(editingTransaction.id, values);
-        setTransactions(prev => 
-          prev.map(t => t.id === editingTransaction.id ? result.transaction : t)
-        );
-      } else {
-        // Create new recurring transaction
-        const result = await createRecurringTransaction(values);
-        setTransactions(prev => [result.transaction, ...prev]);
+      console.log('Submitting recurring transaction form with values:', values);
+      
+      // Make sure we have a valid category ID (must be a number)
+      // If the category is a string (like 'food'), we need to find the corresponding category ID
+      let categoryId = values.category;
+      
+      // If categoryId is not a number, try to find the matching category from our categories array
+      if (isNaN(parseInt(categoryId))) {
+        console.log('Category is not a number, looking for matching category ID');
+        const matchingCategory = categories.find(cat => cat.name === values.category || cat.value === values.category);
+        if (matchingCategory) {
+          categoryId = matchingCategory.category_id;
+          console.log(`Found matching category ID: ${categoryId} for category: ${values.category}`);
+        } else {
+          console.warn(`Could not find matching category ID for: ${values.category}`);
+          // Default to null if no matching category is found
+          categoryId = null;
+        }
       }
       
-      setIsModalOpen(false);
-      setEditingTransaction(null);
+      // Format the data to match what the backend expects
+      const formattedData = {
+        name: values.name,
+        amount: parseFloat(values.amount),
+        category: categoryId, // Use the numeric category ID
+        frequency: values.frequency,
+        startDate: values.startDate,
+        endDate: values.endDate || null,
+        type: values.type,
+        payment_method: values.payment_method || null,
+        notes: values.description || null,
+        isActive: values.notifications !== false
+      };
+      
+      console.log('Formatted data for API:', formattedData);
+      
+      if (editingTransaction) {
+        // Update existing recurring transaction
+        const result = await updateRecurringTransaction(editingTransaction.id, formattedData);
+        console.log('Update result:', result);
+        
+        if (result && result.transaction) {
+          setTransactions(prev => 
+            prev.map(t => t.id === editingTransaction.id ? result.transaction : t)
+          );
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        } else {
+          throw new Error('Invalid response format from server');
+        }
+      } else {
+        // Create new recurring transaction
+        const result = await createRecurringTransaction(formattedData);
+        console.log('Create result:', result);
+        
+        if (result && result.transaction) {
+          setTransactions(prev => [result.transaction, ...prev]);
+          setIsModalOpen(false);
+          setEditingTransaction(null);
+        } else {
+          throw new Error('Invalid response format from server');
+        }
+      }
     } catch (err) {
       console.error('Error saving recurring transaction:', err);
-      alert('Failed to save recurring transaction. Please try again.');
+      alert(`Failed to save recurring transaction: ${err.message || 'Please try again.'}`);
     }
   };
 

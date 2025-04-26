@@ -10,17 +10,11 @@ const frequencies = [
   { label: 'Yearly', value: 'yearly' },
 ];
 
-const categories = [
-  { label: 'Food', value: 'food' },
-  { label: 'Transport', value: 'transport' },
-  { label: 'Rent', value: 'rent' },
-  { label: 'Utilities', value: 'utilities' },
-  { label: 'Entertainment', value: 'entertainment' },
-  { label: 'Subscriptions', value: 'subscriptions' },
-  { label: 'Income', value: 'income' },
-];
+// Categories will be passed as props from the parent component
 
-const RecurringTransactionForm = ({ isOpen, onClose, transaction, onSubmit }) => {
+const RecurringTransactionForm = ({ isOpen, onClose, transaction, onSubmit, categories = [] }) => {
+  // Log the categories received from props
+  console.log('Categories in RecurringTransactionForm:', categories);
   const formik = useFormik({
     initialValues: {
       name: transaction?.name || '',
@@ -114,8 +108,8 @@ const RecurringTransactionForm = ({ isOpen, onClose, transaction, onSubmit }) =>
               >
                 <option value="">Select a category</option>
                 {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
+                  <option key={category.category_id} value={category.category_id}>
+                    {category.name}
                   </option>
                 ))}
               </select>
