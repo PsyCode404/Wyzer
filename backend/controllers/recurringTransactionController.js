@@ -137,6 +137,8 @@ export async function createRecurringTransaction(req, res) {
   const user_id = req.user?.user_id || 1; // Default to user_id 1 for development
   
   console.log('Creating recurring transaction for user_id:', user_id);
+  console.log('Request body:', req.body);
+  
   const {
     name,
     amount,
@@ -151,7 +153,8 @@ export async function createRecurringTransaction(req, res) {
   } = req.body;
   
   // Validate required fields
-  if (!name || !amount || !frequency || !startDate || !type) {
+  if (!name || amount === undefined || !frequency || !startDate || !type) {
+    console.error('Validation failed:', { name, amount, frequency, startDate, type });
     return res.status(400).json({ 
       message: 'Name, amount, frequency, start date, and type are required.' 
     });
@@ -223,7 +226,10 @@ export async function createRecurringTransaction(req, res) {
     });
   } catch (err) {
     console.error('Error creating recurring transaction:', err);
-    res.status(500).json({ message: 'Server error while creating recurring transaction.' });
+    res.status(500).json({ 
+      message: 'Server error while creating recurring transaction.',
+      error: err.message 
+    });
   }
 }
 
@@ -338,7 +344,10 @@ export async function updateRecurringTransaction(req, res) {
     });
   } catch (err) {
     console.error('Error updating recurring transaction:', err);
-    res.status(500).json({ message: 'Server error while updating recurring transaction.' });
+    res.status(500).json({ 
+      message: 'Server error while updating recurring transaction.',
+      error: err.message 
+    });
   }
 }
 
