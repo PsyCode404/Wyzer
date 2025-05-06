@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useFormik } from 'formik';
 import * as Yup from 'yup';
 import {
@@ -9,6 +9,7 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
+import { getUserProfile, updateUserProfile, uploadProfilePicture, updateCurrencyPreference } from '../utils/profileApi';
 
 const currencies = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -17,10 +18,10 @@ const currencies = [
   { code: 'GBP', symbol: '£', name: 'British Pound' },
 ];
 
-// Sample user data - replace with real data from your backend
+// Initial empty user data structure
 const initialUserData = {
-  name: 'John Doe',
-  email: 'john.doe@example.com',
+  name: '',
+  email: '',
   currency: 'USD',
   profilePicture: null,
 };
@@ -28,6 +29,8 @@ const initialUserData = {
 const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const formik = useFormik({
     initialValues: initialUserData,
@@ -37,14 +40,58 @@ const ProfilePage = () => {
       currency: Yup.string().required('Currency is required'),
     }),
     onSubmit: async (values) => {
-      // TODO: Implement API call to update user profile
-      console.log('Updated profile:', values);
-      setSuccessMessage('Profile updated successfully');
-      setTimeout(() => setSuccessMessage(''), 3000);
-      setIsEditing(false);
+      try {
+        setError(null);
+        console.log('Updating profile with values:', values);
+        
+        // Call the API to update the user profile
+        const updatedProfile = await updateUserProfile({
+          name: values.name,
+          email: values.email,
+          currency: values.currency
+        });
+        
+        console.log('Profile updated successfully:', updatedProfile);
+        setSuccessMessage('Profile updated successfully');
+        setTimeout(() => setSuccessMessage(''), 3000);
+        setIsEditing(false);
+      } catch (err) {
+        console.error('Error updating profile:', err);
+        setError('Failed to update profile. Please try again.');
+      }
     },
   });
 
+  // Load user profile data when component mounts
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        
+        // Call the API to get the user profile
+        const profileData = await getUserProfile();
+        console.log('Fetched user profile:', profileData);
+        
+        // Update formik values with the fetched profile data
+        formik.setValues({
+          name: profileData.name || '',
+          email: profileData.email || '',
+          currency: profileData.currency || 'USD',
+          profilePicture: profileData.profilePicture || null
+        });
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error fetching user profile:', err);
+        setError('Failed to load profile data. Please refresh the page.');
+        setIsLoading(false);
+      }
+    };
+    
+    fetchUserProfile();
+  }, []);
+  
   const handleFileChange = async (event) => {
     const file = event.target.files[0];
     if (!file) return;
@@ -63,12 +110,59 @@ const ProfilePage = () => {
       return;
     }
 
-    // Convert to base64 for preview
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      formik.setFieldValue('profilePicture', reader.result);
-    };
-    reader.readAsDataURL(file);
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      // Convert to base64 for preview and API upload
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64Image = reader.result;
+        
+        // Update local state for immediate preview
+        formik.setFieldValue('profilePicture', base64Image);
+        
+        try {
+          // Upload the image to the backend
+          const response = await uploadProfilePicture(base64Image);
+          console.log('Profile picture uploaded:', response);
+          
+          // Update the profile picture URL from the server response
+          if (response && response.profilePicture) {
+            formik.setFieldValue('profilePicture', response.profilePicture);
+          }
+          
+          setSuccessMessage('Profile picture updated successfully');
+          setTimeout(() => setSuccessMessage(''), 3000);
+        } catch (uploadErr) {
+          console.error('Error uploading profile picture:', uploadErr);
+          setError('Failed to upload profile picture. Please try again.');
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      console.error('Error processing profile picture:', err);
+      setError('Failed to process profile picture. Please try again.');
+      setIsLoading(false);
+    }
+  };
+  
+  // Handle currency change separately to update immediately
+  const handleCurrencyChange = async (e) => {
+    const currencyValue = e.target.value;
+    formik.setFieldValue('currency', currencyValue);
+    
+    if (isEditing) {
+      try {
+        // Update currency preference immediately
+        const response = await updateCurrencyPreference(currencyValue);
+        console.log('Currency preference updated:', response);
+      } catch (err) {
+        console.error('Error updating currency preference:', err);
+      }
+    }
   };
 
   return (
@@ -76,21 +170,46 @@ const ProfilePage = () => {
       <Navbar />
 
       <main className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-text mb-2">Profile</h1>
-          <p className="text-gray-500">View and update your personal information below</p>
-        </div>
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        )}
+        
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
+            {error}
+          </div>
+        )}
+        
+        {!isLoading && !error && (
+        <>
+          <div className="mb-8">
+            <h1 className="text-2xl font-bold text-text mb-2">Profile</h1>
+            <p className="text-gray-500">View and update your personal information below</p>
+          </div>
 
-        <form onSubmit={formik.handleSubmit} className="space-y-8">
+          <form onSubmit={formik.handleSubmit} className="space-y-8">
           {/* Profile Picture */}
           <div className="flex flex-col items-center">
             <div className="relative">
               <div className="w-32 h-32 rounded-full overflow-hidden bg-gray-100">
                 {formik.values.profilePicture ? (
                   <img
-                    src={formik.values.profilePicture}
+                    src={formik.values.profilePicture.startsWith('data:') || formik.values.profilePicture.startsWith('http') 
+                      ? formik.values.profilePicture 
+                      : `http://localhost:5000${formik.values.profilePicture}`}
                     alt="Profile"
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Error loading profile image:', e);
+                      e.target.onerror = null;
+                      e.target.src = '';
+                      // Fallback to icon if image fails to load
+                      formik.setFieldValue('profilePicture', null);
+                    }}
                   />
                 ) : (
                   <UserCircleIcon className="w-full h-full text-gray-400" />
@@ -185,7 +304,9 @@ const ProfilePage = () => {
                     ? 'focus:ring-2 focus:ring-primary focus:border-transparent'
                     : 'bg-gray-50'
                 }`}
-                {...formik.getFieldProps('currency')}
+                value={formik.values.currency}
+                onChange={handleCurrencyChange}
+                onBlur={formik.handleBlur}
               >
                 {currencies.map((currency) => (
                   <option key={currency.code} value={currency.code}>
@@ -220,7 +341,8 @@ const ProfilePage = () => {
               </button>
             </div>
           )}
-        </form>
+          </form>
+        </>)}
       </main>
     </div>
   );

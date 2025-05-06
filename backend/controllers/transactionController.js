@@ -407,6 +407,206 @@ export async function getTransactionStats(req, res) {
   }
 }
 
+// Get category summary for spending breakdown chart
+export async function getCategorySummary(req, res) {
+  // For development, handle case when req.user is undefined
+  const user_id = req.user?.user_id || 1; // Default to user_id 1 for development
+  
+  // Get date range from query params or use current month as default
+  const today = new Date();
+  const startDate = req.query.startDate || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
+  const endDate = req.query.endDate || today.toISOString().split('T')[0];
+  
+  console.log(`Fetching category summary for user_id: ${user_id}, date range: ${startDate} to ${endDate}`);
+  
+  try {
+    const pool = getPool();
+    
+    // Get spending by category
+    const query = `
+      SELECT 
+        c.category_id,
+        c.name,
+        c.color,
+        c.icon,
+        SUM(t.amount) as total
+      FROM transactions t
+      JOIN categories c ON t.category_id = c.category_id
+      WHERE t.user_id = ? 
+        AND t.date BETWEEN ? AND ? 
+        AND t.type = 'expense'
+      GROUP BY c.category_id
+      ORDER BY total DESC
+    `;
+    
+    console.log('Executing category summary query:', query);
+    console.log('Query params:', [user_id, startDate, endDate]);
+    
+    const [categories] = await pool.query(query, [user_id, startDate, endDate]);
+    console.log(`Found ${categories.length} categories with spending`);
+    
+    // Get total spending
+    const [totalResult] = await pool.query(
+      'SELECT SUM(amount) as total FROM transactions WHERE user_id = ? AND date BETWEEN ? AND ? AND type = "expense"',
+      [user_id, startDate, endDate]
+    );
+    
+    const totalSpending = totalResult[0].total || 0;
+    console.log(`Total spending: ${totalSpending}`);
+    
+    // If no categories found, try to get all available categories for the user
+    let categoriesWithPercentage = [];
+    if (categories.length === 0) {
+      console.log('No spending found, fetching all available categories');
+      const [allCategories] = await pool.query(
+        `SELECT category_id, name, color, icon FROM categories WHERE user_id = ? OR user_id IS NULL`,
+        [user_id]
+      );
+      
+      categoriesWithPercentage = allCategories.map(category => ({
+        ...category,
+        total: 0,
+        percentage: 0
+      }));
+    } else {
+      // Calculate percentage for each category
+      categoriesWithPercentage = categories.map(category => ({
+        ...category,
+        percentage: totalSpending > 0 ? Math.round((category.total / totalSpending) * 100) : 0
+      }));
+    }
+    
+    const response = {
+      categories: categoriesWithPercentage,
+      totalSpending,
+      startDate,
+      endDate
+    };
+    
+    console.log('Sending category summary response');
+    res.status(200).json(response);
+  } catch (err) {
+    console.error('Error fetching category summary:', err);
+    res.status(500).json({ message: 'Server error while fetching category summary.' });
+  }
+}
+
+// Export transactions to CSV
+export async function exportTransactions(req, res) {
+  // For development, handle case when req.user is undefined
+  const user_id = req.user?.user_id || 1; // Default to user_id 1 for development
+  
+  // Get filters from query params
+  const { startDate, endDate, type, category_id } = req.query;
+  
+  console.log(`Exporting transactions for user_id: ${user_id}`);
+  console.log('Export filters:', { startDate, endDate, type, category_id });
+  
+  try {
+    const pool = getPool();
+    
+    // Build query with filters
+    let query = `
+      SELECT 
+        t.transaction_id,
+        t.date,
+        t.description,
+        t.amount,
+        t.type,
+        c.name as category,
+        t.payment_method,
+        t.status,
+        t.notes,
+        t.location,
+        t.tags,
+        t.created_at
+      FROM transactions t
+      LEFT JOIN categories c ON t.category_id = c.category_id
+      WHERE t.user_id = ?
+    `;
+    
+    const queryParams = [user_id];
+    
+    // Apply filters if provided
+    if (startDate && endDate) {
+      query += ' AND t.date BETWEEN ? AND ?';
+      queryParams.push(startDate, endDate);
+    }
+    
+    if (type) {
+      query += ' AND t.type = ?';
+      queryParams.push(type);
+    }
+    
+    if (category_id) {
+      query += ' AND t.category_id = ?';
+      queryParams.push(category_id);
+    }
+    
+    // Add sorting
+    query += ' ORDER BY t.date DESC, t.created_at DESC';
+    
+    console.log('Export query:', query);
+    console.log('Query params:', queryParams);
+    
+    const [transactions] = await pool.query(query, queryParams);
+    console.log(`Found ${transactions.length} transactions to export`);
+    
+    // If no transactions found, return an empty CSV with headers
+    if (transactions.length === 0) {
+      console.log('No transactions found, returning empty CSV with headers');
+      const headers = ['ID', 'Date', 'Description', 'Amount', 'Type', 'Category', 'Payment Method', 'Status', 'Notes', 'Location', 'Tags'];
+      const csvContent = headers.join(',') + '\r\n';
+      
+      // Set response headers for file download
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader('Content-Disposition', `attachment; filename="transactions-${new Date().toISOString().split('T')[0]}.csv"`);
+      
+      // Send empty CSV content
+      return res.status(200).send(csvContent);
+    }
+    
+    // Generate CSV content
+    const headers = ['ID', 'Date', 'Description', 'Amount', 'Type', 'Category', 'Payment Method', 'Status', 'Notes', 'Location', 'Tags'];
+    
+    let csvContent = headers.join(',') + '\r\n';
+    
+    // Add transaction rows
+    transactions.forEach(transaction => {
+      const row = [
+        transaction.transaction_id,
+        transaction.date,
+        `"${(transaction.description || '').replace(/"/g, '""')}"`, // Escape quotes in CSV
+        transaction.amount,
+        transaction.type,
+        `"${(transaction.category || 'Uncategorized').replace(/"/g, '""')}"`,
+        transaction.payment_method || '',
+        transaction.status || '',
+        `"${(transaction.notes || '').replace(/"/g, '""')}"`,
+        `"${(transaction.location || '').replace(/"/g, '""')}"`,
+        transaction.tags ? `"${transaction.tags.replace(/"/g, '""')}"` : ''
+      ];
+      
+      csvContent += row.join(',') + '\r\n';
+    });
+    
+    console.log('Generated CSV content successfully');
+    
+    // Set response headers for file download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="transactions-${new Date().toISOString().split('T')[0]}.csv"`);
+    res.setHeader('Access-Control-Allow-Origin', '*'); // Allow cross-origin requests
+    res.setHeader('Access-Control-Expose-Headers', 'Content-Disposition'); // Expose the filename header
+    
+    // Send CSV content
+    console.log('Sending CSV response');
+    res.status(200).send(csvContent);
+  } catch (err) {
+    console.error('Error exporting transactions:', err);
+    res.status(500).json({ message: 'Server error while exporting transactions.' });
+  }
+}
+
 // Bulk import transactions
 export async function bulkImportTransactions(req, res) {
   // For development, handle case when req.user is undefined

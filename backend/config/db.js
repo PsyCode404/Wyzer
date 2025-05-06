@@ -5,21 +5,34 @@ dotenv.config();
 let pool;
 
 export const connectDB = async () => {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST,
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      database: process.env.DB_NAME,
-      port: process.env.DB_PORT || 3306,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+  try {
+    if (!pool) {
+      pool = mysql.createPool({
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'wyzer',
+        port: process.env.DB_PORT || 3306,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+      });
+
+      // Verify connection immediately
+      const connection = await pool.getConnection();
+      await connection.ping();
+      connection.release();
+      console.log('MySQL DB connected');
+    }
+  } catch (err) {
+    console.error('Database connection error:', err);
+    throw err;
   }
-  // Test connection
-  await pool.query('SELECT 1');
-  console.log('MySQL DB connected');
 };
 
-export const getPool = () => pool;
+export const getPool = () => {
+  if (!pool) {
+    throw new Error('Database pool not initialized. Did you call connectDB()?');
+  }
+  return pool;
+};

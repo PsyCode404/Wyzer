@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { logout } from '../utils/authUtils';
 import {
   UserCircleIcon,
   ChartPieIcon,
@@ -11,8 +12,15 @@ import {
 
 const Navbar = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const navigate = useNavigate();
 
   const toggleProfileMenu = () => setShowProfileMenu(!showProfileMenu);
+  
+  const handleLogout = (e) => {
+    e.preventDefault();
+    logout();
+    // The logout function will handle the redirection to the login page
+  };
 
   return (
     <nav className="bg-white shadow-md">
@@ -64,12 +72,12 @@ const Navbar = () => {
                     Settings
                   </Link>
                   <hr className="my-1" />
-                  <Link
-                    to="/logout"
-                    className="block px-4 py-2 text-text hover:bg-primary hover:bg-opacity-10 transition-colors"
+                  <button
+                    onClick={handleLogout}
+                    className="block w-full text-left px-4 py-2 text-text hover:bg-primary hover:bg-opacity-10 transition-colors"
                   >
                     Logout
-                  </Link>
+                  </button>
                 </div>
               )}
             </div>

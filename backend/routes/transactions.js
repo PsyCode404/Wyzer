@@ -6,7 +6,9 @@ import {
   updateTransaction, 
   deleteTransaction,
   getTransactionStats,
-  bulkImportTransactions
+  bulkImportTransactions,
+  getCategorySummary,
+  exportTransactions
 } from '../controllers/transactionController.js';
 import { authenticateToken } from '../middleware/authMiddleware.js';
 
@@ -20,6 +22,12 @@ router.get('/', getTransactions);
 
 // GET /api/transactions/stats - Get transaction statistics
 router.get('/stats', getTransactionStats);
+
+// GET /api/transactions/category-summary - Get spending by category
+router.get('/category-summary', getCategorySummary);
+
+// GET /api/transactions/export - Export transactions to CSV
+router.get('/export', exportTransactions);
 
 // GET /api/transactions/:id - Get a single transaction by ID
 router.get('/:id', getTransactionById);
