@@ -16,25 +16,33 @@ import TransactionFilters from '../components/TransactionFilters';
 import TransactionModal from '../components/TransactionModal';
 
 // Import API utilities
-import { getTransactions, createTransaction, updateTransaction, deleteTransaction } from '../utils/transactionApi';
+import { getTransactions, createTransaction, updateTransaction, deleteTransaction, exportTransactions } from '../utils/transactionApi';
 import { getCategories } from '../utils/categoryApi';
+import eventBus, { EVENTS } from '../utils/eventBus';
 
-const categoryColors = {
-  food: 'bg-green-100 text-green-800',
-  transport: 'bg-blue-100 text-blue-800',
-  rent: 'bg-purple-100 text-purple-800',
-  house: 'bg-yellow-100 text-yellow-800',
-  subscriptions: 'bg-pink-100 text-pink-800',
-  custom: 'bg-gray-100 text-gray-800',
-  income: 'bg-primary bg-opacity-10 text-text',
+// Use UI category colors for display (these are different from the hex colors used in charts)
+const uiCategoryColors = {
+  Food: 'bg-green-100 text-green-800',
+  Transport: 'bg-blue-100 text-blue-800',
+  Rent: 'bg-purple-100 text-purple-800',
+  Entertainment: 'bg-pink-100 text-pink-800',
+  Utilities: 'bg-yellow-100 text-yellow-800',
+  Shopping: 'bg-red-100 text-red-800',
+  Health: 'bg-indigo-100 text-indigo-800',
+  Education: 'bg-teal-100 text-teal-800',
+  Travel: 'bg-orange-100 text-orange-800',
+  Other: 'bg-gray-100 text-gray-800',
+  Income: 'bg-primary bg-opacity-10 text-text',
 };
 
 const TransactionPage = () => {
+
   const [transactions, setTransactions] = useState([]);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [totalCount, setTotalCount] = useState(0);
+
   
   const [filters, setFilters] = useState({
     search: '',
@@ -81,11 +89,19 @@ const TransactionPage = () => {
         if (filters.maxAmount) apiFilters.maxAmount = filters.maxAmount;
         
         const result = await getTransactions(apiFilters);
-        setTransactions(result.transactions);
-        setTotalCount(result.total);
+        
+        // Ensure transactions is always an array
+        if (!result.transactions) {
+          console.warn('No transactions array in API response, using empty array');
+          result.transactions = [];
+        }
+        setTransactions(result.transactions || []);
+        setTotalCount(result.total || 0);
       } catch (err) {
         console.error('Error fetching transactions:', err);
         setError('Failed to load transactions. Please try again.');
+        setTransactions([]);
+        setTotalCount(0);
       } finally {
         setIsLoading(false);
       }
@@ -130,6 +146,13 @@ const TransactionPage = () => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
       try {
         await deleteTransaction(transactionId);
+        
+        // Notify other components that a transaction has been deleted
+        eventBus.publish(EVENTS.TRANSACTION_UPDATED, {
+          action: 'delete',
+          transactionId: transactionId
+        });
+        
         // Refresh the transactions list
         setTransactions(transactions.filter(t => t.transaction_id !== transactionId));
       } catch (err) {
@@ -153,31 +176,71 @@ const TransactionPage = () => {
         notes: values.notes || null
       };
       
+      let result;
       if (editingTransaction) {
         // Update existing transaction
-        await updateTransaction(editingTransaction.transaction_id, transactionData);
+        result = await updateTransaction(editingTransaction.transaction_id, transactionData);
+        console.log('Transaction updated:', result);
       } else {
         // Create new transaction
-        await createTransaction(transactionData);
+        result = await createTransaction(transactionData);
+        console.log('Transaction created:', result);
       }
       
-      // Refresh the transactions list
-      const result = await getTransactions({
-        limit: itemsPerPage,
-        offset: (currentPage - 1) * itemsPerPage
+      // Notify other components that a transaction has been updated
+      eventBus.publish(EVENTS.TRANSACTION_UPDATED, {
+        action: editingTransaction ? 'update' : 'create',
+        transaction: result?.transaction || transactionData
       });
       
-      setTransactions(result.transactions);
-      setTotalCount(result.total);
+      // Refresh the transactions list
+      try {
+        const result = await getTransactions({
+          limit: itemsPerPage,
+          offset: (currentPage - 1) * itemsPerPage
+        });
+        
+        if (result && result.transactions) {
+          setTransactions(result.transactions);
+          setTotalCount(result.total || result.transactions.length);
+        }
+      } catch (err) {
+        console.error('Error refreshing transactions:', err);
+        // Even if refresh fails, show success message for the save operation
+        alert('Transaction saved successfully, but could not refresh the list.');
+      }
+      
+      // Close the modal after successful submission
+      setIsModalOpen(false);
+      setEditingTransaction(null);
     } catch (err) {
       console.error('Error saving transaction:', err);
       alert('Failed to save transaction. Please try again.');
     }
   };
 
-  const handleExport = () => {
-    // Handle export logic here
-    console.log('Export transactions');
+  const handleExport = async () => {
+    try {
+      // Show loading indicator or notification
+      // You could add a state variable for this if needed
+      
+      // Prepare export filters based on current filter state
+      const exportFilters = {
+        startDate: filters.dateRange !== 'all' ? filters.startDate : undefined,
+        endDate: filters.dateRange !== 'all' ? filters.endDate : undefined,
+        type: filters.type !== 'all' ? filters.type : undefined,
+        category_id: filters.category !== 'all' ? filters.category : undefined
+      };
+      
+      // Call the export API
+      await exportTransactions(exportFilters);
+      
+      // Show success message if needed
+      // This could be a toast notification or alert
+    } catch (err) {
+      console.error('Error exporting transactions:', err);
+      alert('Failed to export transactions. Please try again.');
+    }
   };
 
   // Calculate pagination
@@ -265,7 +328,7 @@ const TransactionPage = () => {
                       {error}
                     </td>
                   </tr>
-                ) : transactions.length === 0 ? (
+                ) : !transactions || transactions.length === 0 ? (
                   <tr>
                     <td colSpan="4" className="py-8 text-center text-gray-500">
                       No transactions found. Add your first transaction using the button above.

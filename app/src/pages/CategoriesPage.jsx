@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import {
   PlusIcon,
@@ -10,8 +10,9 @@ import {
 import Navbar from '../components/Navbar';
 import CategoryForm from '../components/CategoryForm';
 import { categoryIcons } from '../utils/categoryIcons';
+import { getCategories, createCategory, updateCategory, deleteCategory } from '../utils/categoryApi';
 
-// Sample data - replace with real data from your backend
+// Sample data for UI rendering - actual data will come from API
 const defaultCategories = [
   {
     id: 1,
@@ -69,7 +70,10 @@ const customCategories = [
 ];
 
 const CategoriesPage = () => {
+  // Initialize with sample data for immediate UI rendering
   const [categories, setCategories] = useState([...defaultCategories, ...customCategories]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -85,24 +89,105 @@ const CategoriesPage = () => {
     setCategories(items);
   };
 
-  const handleSubmit = (values) => {
-    if (editingCategory) {
-      setCategories((prev) =>
-        prev.map((cat) =>
-          cat.id === editingCategory.id ? { ...cat, ...values } : cat
-        )
-      );
-    } else {
-      setCategories((prev) => [
-        ...prev,
-        {
-          ...values,
-          id: Math.max(...prev.map((cat) => cat.id)) + 1,
+  // Load categories when component mounts
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  // Get a valid icon component or fallback to ChartPieIcon
+  const getIconComponent = (iconName) => {
+    // If the icon exists in our categoryIcons object, return it
+    if (categoryIcons[iconName]) {
+      return categoryIcons[iconName];
+    }
+    
+    // Otherwise, return a default icon
+    console.warn(`Icon '${iconName}' not found, using ChartPieIcon as fallback`);
+    return categoryIcons.ChartPieIcon;
+  };
+
+  // Fetch all categories from the API
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      const data = await getCategories();
+      
+      // Map the API response to match our component's expected format
+      const formattedCategories = data.map(cat => ({
+        id: cat.category_id,
+        name: cat.name,
+        color: cat.color?.replace('#', '') || 'blue', // Remove # from color codes
+        icon: cat.icon || 'ChartPieIcon',
+        isDefault: cat.user_id === null, // System categories have null user_id
+        description: cat.description || '',
+        transactionCount: cat.transaction_count || 0,
+        totalSpent: cat.total_spent || 0,
+        type: cat.type || 'expense'
+      }));
+      
+      setCategories(formattedCategories);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setError('Failed to load categories. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle form submission (create/update)
+  const handleSubmit = async (values) => {
+    try {
+      if (editingCategory) {
+        // Update existing category
+        const apiData = {
+          name: values.name,
+          color: values.color.startsWith('#') ? values.color : `#${values.color}`,
+          icon: values.icon,
+          description: values.description,
+          limit: values.limit || null,
+          type: values.type || 'expense'
+        };
+        
+        await updateCategory(editingCategory.id, apiData);
+        
+        // Update local state
+        setCategories(prev =>
+          prev.map(cat =>
+            cat.id === editingCategory.id ? { ...cat, ...values } : cat
+          )
+        );
+      } else {
+        // Create new category
+        const apiData = {
+          name: values.name,
+          color: values.color.startsWith('#') ? values.color : `#${values.color}`,
+          icon: values.icon,
+          description: values.description,
+          limit: values.limit || null,
+          type: values.type || 'expense'
+        };
+        
+        const result = await createCategory(apiData);
+        
+        // Add new category to local state
+        const newCategory = {
+          id: result.category.category_id,
+          name: result.category.name,
+          color: result.category.color?.replace('#', '') || 'blue',
+          icon: result.category.icon || 'TagIcon',
           isDefault: false,
+          description: result.category.description || '',
           transactionCount: 0,
           totalSpent: 0,
-        },
-      ]);
+          type: result.category.type || 'expense'
+        };
+        
+        setCategories(prev => [...prev, newCategory]);
+      }
+    } catch (err) {
+      console.error('Error saving category:', err);
+      alert(`Failed to save category: ${err.message}`);
     }
   };
 
@@ -110,12 +195,22 @@ const CategoriesPage = () => {
     if (category.transactionCount > 0) {
       setShowDeleteConfirm(category);
     } else {
-      setCategories((prev) => prev.filter((cat) => cat.id !== category.id));
+      deleteConfirmedCategory(category.id);
+    }
+  };
+  
+  const deleteConfirmedCategory = async (categoryId) => {
+    try {
+      await deleteCategory(categoryId);
+      setCategories((prev) => prev.filter((cat) => cat.id !== categoryId));
+    } catch (err) {
+      console.error('Error deleting category:', err);
+      alert(`Failed to delete category: ${err.message}`);
     }
   };
 
   const confirmDelete = () => {
-    setCategories((prev) => prev.filter((cat) => cat.id !== showDeleteConfirm.id));
+    deleteConfirmedCategory(showDeleteConfirm.id);
     setShowDeleteConfirm(null);
   };
 
@@ -176,7 +271,7 @@ const CategoriesPage = () => {
                   className="space-y-2"
                 >
                   {defaultCats.map((category, index) => {
-                    const Icon = categoryIcons[category.icon];
+                    const Icon = getIconComponent(category.icon);
                     return (
                       <Draggable
                         key={category.id}
@@ -249,7 +344,7 @@ const CategoriesPage = () => {
                     className="space-y-2"
                   >
                     {customCats.map((category, index) => {
-                      const Icon = categoryIcons[category.icon];
+                      const Icon = getIconComponent(category.icon);
                       return (
                         <Draggable
                           key={category.id}
