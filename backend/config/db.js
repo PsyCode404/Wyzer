@@ -4,54 +4,53 @@ dotenv.config();
 
 let pool;
 
+// Validate required environment variables
+const requiredEnvVars = ['DB_HOST', 'DB_USER', 'DB_PASSWORD', 'DB_NAME'];
+const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingVars.length > 0) {
+  console.error('Missing required environment variables:', missingVars.join(', '));
+  process.exit(1);
+}
+
 export const connectDB = async () => {
   try {
     if (!pool) {
-      // For Railway, use the MYSQL_URL or construct from individual variables
-      const dbConfig = process.env.MYSQL_URL ? {
-        uri: process.env.MYSQL_URL,
-        ssl: {
-          rejectUnauthorized: false // Required for Railway's MySQL
-        }
-      } : {
-        host: process.env.MYSQLHOST || process.env.DB_HOST || 'localhost',
-        user: process.env.MYSQLUSER || process.env.DB_USER || 'root',
-        password: process.env.MYSQLPASSWORD || process.env.DB_PASSWORD || '',
-        database: process.env.MYSQLDATABASE || process.env.DB_NAME || 'wyzer',
-        port: process.env.MYSQLPORT || process.env.DB_PORT || 3306,
-        ssl: process.env.MYSQL_URL ? {
-          rejectUnauthorized: false
-        } : undefined,
+      console.log('Connecting to MySQL database...');
+      
+      pool = mysql.createPool({
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: process.env.DB_PORT || 3306,
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        connectTimeout: 60000,
-        multipleStatements: true
-      };
-
-      console.log('Connecting to database with config:', {
-        host: dbConfig.host || 'from MYSQL_URL',
-        database: dbConfig.database || 'from MYSQL_URL',
-        port: dbConfig.port || 'from MYSQL_URL'
+        ssl: false, // Disable SSL as per AlwaysData requirements
+        connectTimeout: 10000, // 10 seconds timeout
       });
-
-      pool = process.env.MYSQL_URL 
-        ? mysql.createPool(process.env.MYSQL_URL + '?ssl={"rejectUnauthorized":false}')
-        : mysql.createPool(dbConfig);
 
       // Verify connection immediately
       const connection = await pool.getConnection();
       await connection.ping();
       connection.release();
-      console.log('MySQL DB connected successfully');
+      
+      console.log('✅ Successfully connected to MySQL database on', process.env.DB_HOST);
+      console.log('📊 Database:', process.env.DB_NAME);
     }
+    return pool;
   } catch (err) {
-    console.error('Database connection error:', {
-      message: err.message,
+    console.error('❌ Database connection failed:', {
       code: err.code,
       errno: err.errno,
       sqlState: err.sqlState,
-      sqlMessage: err.sqlMessage
+      message: err.message,
+    });
+    console.error('🔧 Connection details:', {
+      host: process.env.DB_HOST,
+      database: process.env.DB_NAME,
+      port: process.env.DB_PORT || 3306
     });
     throw err;
   }

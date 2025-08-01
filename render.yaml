@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: wyzer-backend
+    env: node
+    build:
+      command: "cd backend && npm install"
+      publish: "backend/build"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: wyzer-db
+          property: connectionString
+          propertyKey: hostname
+      - key: DB_USER
+        fromDatabase:
+          name: wyzer-db
+          property: connectionString
+          propertyKey: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: wyzer-db
+          property: connectionString
+          propertyKey: password
+      - key: DB_NAME
+        fromDatabase:
+          name: wyzer-db
+          property: connectionString
+          propertyKey: database
+    buildCommand: "cd backend && npm install && npm run build"
+    startCommand: "cd backend && node server.js"
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+
+databases:
+  - name: wyzer-db
+    databaseName: wyzer
+    user: wyzer_user
+    plan: free
+    engine: mysql
+    version: "8.0"
