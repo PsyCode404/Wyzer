@@ -4,7 +4,8 @@ services:
     name: wyzer-backend
     env: node
     buildCommand: "chmod +x render-build.sh && ./render-build.sh"
-    startCommand: "cd backend && node server.js"
+    startCommand: "node backend/server.js"
+    workingDirectory: "/opt/render/project"
     envVars:
       - key: PORT
         value: 10000
