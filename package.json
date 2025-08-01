@@ -1,5 +1,14 @@
 {
-  "dependencies": {
-    "mysql2": "^3.14.1"
-  }
+  "name": "wyzer",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "cd backend && npm start",
+    "build": "cd backend && npm install",
+    "dev": "cd backend && npm run dev"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "dependencies": {}
 }
