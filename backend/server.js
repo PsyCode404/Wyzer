@@ -21,6 +21,10 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Get directory paths
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Middleware
 // CORS configuration
 const corsOptions = {
@@ -54,11 +58,9 @@ app.options('*', cors({
 }));
 
 // Parse JSON bodies
-app.use(express.json({ limit: '10mb' })); // Increase limit for profile picture uploads
+app.use(express.json({ limit: '10mb' }));
 
 // Create uploads directory if it doesn't exist
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const uploadsDir = path.join(__dirname, 'uploads');
 const profilesDir = path.join(uploadsDir, 'profiles');
 
@@ -72,10 +74,16 @@ if (!fs.existsSync(profilesDir)) {
   console.log('Created profiles directory:', profilesDir);
 }
 
-// Setup static file serving
+// Path to the React app's build directory
+const clientBuildPath = path.join(__dirname, '../../build');
+
+// Serve static files from the React app
+app.use(express.static(clientBuildPath));
+
+// Setup other static middleware (for uploads, etc.)
 setupStaticMiddleware(app);
 
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/onboarding', onboardingRoutes);
@@ -90,23 +98,32 @@ app.get('/api/health', (_req, res) => {
   res.status(200).json({ status: 'ok' });
 });
 
-// Root route
-app.get('/', (req, res) => {
-  // Redirect to login page (frontend)
-  res.redirect('/login');
+// Serve the React app for all other routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Error sending file:', err);
+      res.status(500).send('Error loading the application');
+    }
+  });
 });
 
 // Global error handler – must be defined AFTER route declarations
 app.use((err, _req, res, _next) => {
   console.error('Unhandled server error:', err);
-  res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
+  res.status(500).json({ 
+    message: 'Server error', 
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined 
+  });
 });
 
 // Start server after DB connection
 connectDB()
   .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server is running on port ${PORT}`);
+      console.log(`API available at http://localhost:${PORT}/api`);
+      console.log(`Frontend available at http://localhost:${PORT}`);
     });
   })
   .catch((err) => {

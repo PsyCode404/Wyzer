@@ -1,5 +1,8 @@
 // Wyzer API utility for authentication
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+// Using relative path for API requests - works in both dev and production
+const API_BASE = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api' 
+  : '/api';
 
 export async function register({ name, email, password }) {
   const res = await fetch(`${API_BASE}/auth/register`, {
