@@ -76,29 +76,42 @@ if (!fs.existsSync(profilesDir)) {
 
 // Path to the React app's build directory - check multiple possible locations
 const possibleBuildPaths = [
-  path.join(__dirname, '../../build'),  // Local development
-  path.join(process.cwd(), 'build'),    // Render production
-  '/opt/render/project/build'           // Render specific path
+  '/opt/render/project/build',           // Render production (absolute path)
+  path.join(process.cwd(), 'build'),     // Local build in current directory
+  path.join(__dirname, '../../build'),   // Local development
+  path.join(process.cwd(), '../build')   // Alternative local path
 ];
 
 let clientBuildPath = null;
+
+// Log all paths we're checking
+console.log('Checking for build directory in these locations:');
 for (const buildPath of possibleBuildPaths) {
-  if (fs.existsSync(buildPath)) {
+  console.log(`- ${buildPath} (${fs.existsSync(buildPath) ? '✅ Exists' : '❌ Not found'})`);
+  if (!clientBuildPath && fs.existsSync(buildPath)) {
     clientBuildPath = buildPath;
-    console.log(`Found React build at: ${clientBuildPath}`);
-    break;
   }
 }
 
-if (!clientBuildPath) {
-  console.error('Could not find React build directory in any of the expected locations');
-  console.log('Current working directory:', process.cwd());
-  console.log('__dirname:', __dirname);
-  console.log('Directory contents:', fs.readdirSync(path.dirname(process.cwd())));
-} else {
+// If we found a valid build directory
+if (clientBuildPath) {
+  console.log(`\n✅ Found React build at: ${clientBuildPath}`);
+  console.log('Build directory contents:', fs.readdirSync(clientBuildPath));
+  
   // Serve static files from the React app
-  console.log(`Serving static files from: ${clientBuildPath}`);
-  app.use(express.static(clientBuildPath));
+  console.log(`\n🔧 Serving static files from: ${clientBuildPath}`);
+  app.use(express.static(clientBuildPath, {
+    etag: true,
+    maxAge: '1y',
+    immutable: true,
+    index: 'index.html'
+  }));
+} else {
+  console.error('\n❌ Could not find React build directory in any of these locations:');
+  possibleBuildPaths.forEach(p => console.log(`- ${p}`));
+  console.log('\nCurrent working directory:', process.cwd());
+  console.log('__dirname:', __dirname);
+  console.log('\nParent directory contents:', fs.readdirSync(process.cwd()));
 }
 
 // Setup other static middleware (for uploads, etc.)
