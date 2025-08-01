@@ -74,11 +74,32 @@ if (!fs.existsSync(profilesDir)) {
   console.log('Created profiles directory:', profilesDir);
 }
 
-// Path to the React app's build directory
-const clientBuildPath = path.join(__dirname, '../../build');
+// Path to the React app's build directory - check multiple possible locations
+const possibleBuildPaths = [
+  path.join(__dirname, '../../build'),  // Local development
+  path.join(process.cwd(), 'build'),    // Render production
+  '/opt/render/project/build'           // Render specific path
+];
 
-// Serve static files from the React app
-app.use(express.static(clientBuildPath));
+let clientBuildPath = null;
+for (const buildPath of possibleBuildPaths) {
+  if (fs.existsSync(buildPath)) {
+    clientBuildPath = buildPath;
+    console.log(`Found React build at: ${clientBuildPath}`);
+    break;
+  }
+}
+
+if (!clientBuildPath) {
+  console.error('Could not find React build directory in any of the expected locations');
+  console.log('Current working directory:', process.cwd());
+  console.log('__dirname:', __dirname);
+  console.log('Directory contents:', fs.readdirSync(path.dirname(process.cwd())));
+} else {
+  // Serve static files from the React app
+  console.log(`Serving static files from: ${clientBuildPath}`);
+  app.use(express.static(clientBuildPath));
+}
 
 // Setup other static middleware (for uploads, etc.)
 setupStaticMiddleware(app);
@@ -100,7 +121,20 @@ app.get('/api/health', (_req, res) => {
 
 // Serve the React app for all other routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(clientBuildPath, 'index.html'), (err) => {
+  if (!clientBuildPath) {
+    return res.status(500).send('React build directory not found');
+  }
+  
+  const indexPath = path.join(clientBuildPath, 'index.html');
+  console.log(`Attempting to serve: ${indexPath}`);
+  
+  if (!fs.existsSync(indexPath)) {
+    console.error(`File not found: ${indexPath}`);
+    console.log(`Build directory contents (${clientBuildPath}):`, fs.readdirSync(clientBuildPath));
+    return res.status(500).send('React application not built correctly');
+  }
+  
+  res.sendFile(indexPath, (err) => {
     if (err) {
       console.error('Error sending file:', err);
       res.status(500).send('Error loading the application');
