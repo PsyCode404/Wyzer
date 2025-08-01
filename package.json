@@ -1,5 +1,38 @@
 {
+  "name": "wyzer",
+  "version": "1.0.0",
+  "description": "Wyzer - Personal Finance Application",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "npm install && cd backend && npm install && cd ../app && npm install",
+    "client": "cd app && npm start",
+    "server": "cd backend && node server.js",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "echo \"Building frontend...\" && cd app && npm install && npm run build && echo \"Frontend build complete\" && cd ../backend && echo \"Installing backend dependencies...\" && npm install && echo \"Backend setup complete\"",
+    "start": "node backend/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "heroku-prebuild": "echo \"Skipping prebuild for Heroku\"",
+    "heroku-postbuild": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/PsyCode404/Wyzer.git"
+  },
+  "keywords": [
+    "finance",
+    "budget",
+    "expense",
+    "tracker"
+  ],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "mysql2": "^3.14.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   }
 }

@@ -1,7 +1,8 @@
 {
-  "name": "auth",
-  "version": "0.1.0",
+  "name": "wyzer-frontend",
+  "version": "1.0.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
     "@heroicons/react": "^2.2.0",
@@ -23,8 +24,11 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
+    "build:prod": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d build"
   },
   "eslintConfig": {
     "extends": [
