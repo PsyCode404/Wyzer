@@ -22,17 +22,31 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-// Enable CORS for localhost:3000 and allow credentials for local development
+// Enable CORS based on environment
+const allowedOrigins = [
+  'http://localhost:3000',
+  process.env.FRONTEND_URL,
+  'https://wyzer-production.up.railway.app'
+].filter(Boolean);
+
 app.use(cors({
-  origin: 'http://localhost:3000',
-  credentials: true
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
+      return callback(new Error(msg), false);
+    }
+    return callback(null, true);
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Handle pre-flight requests quickly
-app.options('*', cors({
-  origin: 'http://localhost:3000',
-  credentials: true
-}));
+// Handle pre-flight requests
+app.options('*', cors());
 
 // Parse JSON bodies
 app.use(express.json({ limit: '10mb' })); // Increase limit for profile picture uploads
@@ -83,14 +97,55 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ message: 'Server error', error: process.env.NODE_ENV === 'development' ? err.message : undefined });
 });
 
-// Start server after DB connection
-connectDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+// Start server
+const startServer = async () => {
+  try {
+    // Connect to database
+    await connectDB();
+    
+    // Start the server
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+      console.log(`CORS allowed origins: ${allowedOrigins.join(', ')}`);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to connect to DB:', err);
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (err) => {
+      console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+      console.error(err);
+      server.close(() => {
+        process.exit(1);
+      });
+    });
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (err) => {
+      console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+      console.error(err);
+      server.close(() => {
+        process.exit(1);
+      });
+    });
+
+    // Handle SIGTERM (for Railway)
+    process.on('SIGTERM', () => {
+      console.log('👋 SIGTERM RECEIVED. Shutting down gracefully');
+      server.close(() => {
+        console.log('💥 Process terminated!');
+      });
+    });
+  } catch (err) {
+    console.error('FATAL ERROR:', {
+      message: err.message,
+      stack: err.stack,
+      code: err.code,
+      errno: err.errno,
+      sqlState: err.sqlState,
+      sqlMessage: err.sqlMessage
+    });
     process.exit(1);
-  });
+  }
+};
+
+// Start the application
+startServer();
