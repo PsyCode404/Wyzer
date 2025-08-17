@@ -21,6 +21,8 @@ services:
         value: gnidi_wyzer
       - key: DB_PORT
         value: 3306
+      - key: JWT_SECRET
+        value: your-secret-key-here
 
   # Frontend Service (Static Site)
   - type: web
