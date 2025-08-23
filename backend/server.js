@@ -59,47 +59,9 @@ if (!fs.existsSync(profilesDir)) {
   console.log('Created profiles directory:', profilesDir);
 }
 
-// Path to the React app's build directory - check multiple possible locations
-const possibleBuildPaths = [
-  '/opt/render/project/build',           // Render production (absolute path)
-  path.join(process.cwd(), 'build'),     // Local build in current directory
-  path.join(__dirname, '../../build'),   // Local development
-  path.join(process.cwd(), '../build')   // Alternative local path
-];
+console.log('🔧 Backend-only deployment - serving API endpoints only');
 
-let clientBuildPath = null;
-
-// Log all paths we're checking
-console.log('Checking for build directory in these locations:');
-for (const buildPath of possibleBuildPaths) {
-  console.log(`- ${buildPath} (${fs.existsSync(buildPath) ? '✅ Exists' : '❌ Not found'})`);
-  if (!clientBuildPath && fs.existsSync(buildPath)) {
-    clientBuildPath = buildPath;
-  }
-}
-
-// If we found a valid build directory
-if (clientBuildPath) {
-  console.log(`\n✅ Found React build at: ${clientBuildPath}`);
-  console.log('Build directory contents:', fs.readdirSync(clientBuildPath));
-  
-  // Serve static files from the React app
-  console.log(`\n🔧 Serving static files from: ${clientBuildPath}`);
-  app.use(express.static(clientBuildPath, {
-    etag: true,
-    maxAge: '1y',
-    immutable: true,
-    index: 'index.html'
-  }));
-} else {
-  console.error('\n❌ Could not find React build directory in any of these locations:');
-  possibleBuildPaths.forEach(p => console.log(`- ${p}`));
-  console.log('\nCurrent working directory:', process.cwd());
-  console.log('__dirname:', __dirname);
-  console.log('\nParent directory contents:', fs.readdirSync(process.cwd()));
-}
-
-// Setup other static middleware (for uploads, etc.)
+// Setup static middleware for uploads
 setupStaticMiddleware(app);
 
 // API Routes
@@ -111,31 +73,21 @@ app.use('/api/recurring', recurringTransactionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Simple health-check endpoint (useful for uptime checks and debugging)
+// Health check endpoint
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ status: 'ok' });
+  res.status(200).json({ 
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
 });
 
-// Serve the React app for all other routes
-app.get('*', (req, res) => {
-  if (!clientBuildPath) {
-    return res.status(500).send('React build directory not found');
-  }
-  
-  const indexPath = path.join(clientBuildPath, 'index.html');
-  console.log(`Attempting to serve: ${indexPath}`);
-  
-  if (!fs.existsSync(indexPath)) {
-    console.error(`File not found: ${indexPath}`);
-    console.log(`Build directory contents (${clientBuildPath}):`, fs.readdirSync(clientBuildPath));
-    return res.status(500).send('React application not built correctly');
-  }
-  
-  res.sendFile(indexPath, (err) => {
-    if (err) {
-      console.error('Error sending file:', err);
-      res.status(500).send('Error loading the application');
-    }
+// Root endpoint
+app.get('/', (_req, res) => {
+  res.json({ 
+    message: 'Wyzer Backend API',
+    status: 'running',
+    endpoints: ['/api/auth', '/api/profile', '/api/transactions', '/api/categories', '/api/recurring', '/api/reports', '/api/dashboard']
   });
 });
 

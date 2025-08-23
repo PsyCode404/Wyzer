@@ -1,8 +1,7 @@
 // Wyzer API utility for reports data
-// Use environment-based API URL for production compatibility
-const API_BASE = process.env.NODE_ENV === 'development' 
-  ? 'http://localhost:5000/api' 
-  : process.env.REACT_APP_API_URL || '/api';
+const API_BASE = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api`
+  : 'http://localhost:5000/api';
 console.log('Reports API using base URL:', API_BASE);
 
 // Helper function to handle API requests
