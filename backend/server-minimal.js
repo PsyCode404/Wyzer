@@ -18,13 +18,18 @@ app.use(cors({
 // Parse JSON
 app.use(express.json());
 
-// Health check endpoint
+// Health check endpoint - must respond quickly for Render
 app.get('/api/health', (req, res) => {
-  res.json({ 
+  res.status(200).json({ 
     status: 'ok',
     timestamp: new Date().toISOString(),
     port: PORT
   });
+});
+
+// Render health check endpoint (sometimes Render checks root)
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
 });
 
 // Root endpoint
@@ -39,15 +44,17 @@ app.get('/', (req, res) => {
 import authRoutes from './routes/auth.js';
 app.use('/api/auth', authRoutes);
 
-// Start server
-connectDB()
-  .then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`✅ Server running on port ${PORT}`);
-      console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+// Start server immediately, connect to DB in background
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  
+  // Connect to database after server starts
+  connectDB()
+    .then(() => {
+      console.log('✅ Database connected successfully');
+    })
+    .catch((err) => {
+      console.error('⚠️ Database connection failed (server still running):', err);
     });
-  })
-  .catch((err) => {
-    console.error('❌ Database connection failed:', err);
-    process.exit(1);
-  });
+});
