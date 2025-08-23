@@ -1,5 +1,7 @@
 // Wyzer API utility for recurring transaction management
-const API_BASE = process.env.REACT_APP_API_BASE || 'http://localhost:5000/api';
+const API_BASE = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api`
+  : 'http://localhost:5000/api';
 
 // Helper function to handle API requests
 async function apiRequest(endpoint, method = 'GET', data = null) {

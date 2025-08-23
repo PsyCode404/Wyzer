@@ -2,10 +2,10 @@ services:
   # Backend Service
   - type: web
     name: wyzer-backend
-    env: node
-    buildCommand: "chmod +x render-build.sh && ./render-build.sh"
-    startCommand: "node backend/server.js"
-    workingDirectory: "/opt/render/project"
+    env: docker
+    region: oregon
+    plan: free
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PORT
         value: 10000

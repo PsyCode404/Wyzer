@@ -477,8 +477,10 @@ export async function exportReportData(startDate, endDate, reportType, categorie
     }
     
     // Create a URL for the export endpoint
-    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
-    const exportUrl = `${baseUrl}/reports/export?${params.toString()}`;
+    const API_BASE = process.env.REACT_APP_API_URL 
+      ? `${process.env.REACT_APP_API_URL}/api`
+      : 'http://localhost:5000/api';
+    const exportUrl = `${API_BASE}/reports/export?${params.toString()}`;
     
     // Open the URL in a new tab to trigger the download
     window.open(exportUrl, '_blank');

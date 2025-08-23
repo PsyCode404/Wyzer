@@ -1,0 +1,17 @@
+node_modules
+npm-debug.log
+.env
+.env.local
+.env.production
+.env.development
+.git
+.gitignore
+README.md
+.DS_Store
+app/
+documentation/
+*.md
+*.txt
+render-build.sh
+bfg.jar
+*.sql
