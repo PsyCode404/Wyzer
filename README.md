@@ -1,4 +1,6 @@
-# Wyzer - Personal Finance Application
+# Wyzer - Personal Finance Tracker
+
+Updated: Fixed registration redirect to dashboardApplication
 
 Wyzer is a comprehensive personal finance and budget tracking web application built with React and Node.js.
 

@@ -47,7 +47,7 @@ export async function registerUser(req, res) {
     );
     // Generate JWT
     const token = jwt.sign({ user_id: result.insertId, email }, JWT_SECRET, { expiresIn: '7d' });
-    res.status(201).json({ message: 'Registration successful!', token, redirect: '/onboarding' });
+    res.status(201).json({ message: 'Registration successful!', token, user_id: result.insertId });
   } catch (err) {
     console.error('Registration error:', err);
     res.status(500).json({ message: 'Server error during registration.' });
