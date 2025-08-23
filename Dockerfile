@@ -18,4 +18,4 @@ RUN npm ci --only=production
 EXPOSE 10000
 
 # Start the backend
-CMD ["node", "server-minimal.js"]
+CMD ["node", "server.js"]
