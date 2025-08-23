@@ -4,63 +4,45 @@ import { getPool } from '../config/db.js';
  * Get summary report data including most expensive categories, monthly comparisons, and trends
  */
 export async function getReportSummary(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   console.log('getReportSummary called with user_id:', user_id);
   
-  // Check if there are any transactions for this user
-  let effectiveUserId = user_id;
-  try {
-    const pool = getPool();
-    const [transactionCount] = await pool.query(
-      'SELECT COUNT(*) as count FROM transactions WHERE user_id = ?',
-      [user_id]
-    );
-    console.log(`Found ${transactionCount[0].count} total transactions for user_id ${user_id}`);
-    
-    // If no transactions, try with user_id = 1 as fallback
-    if (transactionCount[0].count === 0) {
-      const [fallbackCount] = await pool.query(
-        'SELECT COUNT(*) as count FROM transactions WHERE user_id = 1'
-      );
-      console.log(`Found ${fallbackCount[0].count} transactions for fallback user_id 1`);
-      
-      if (fallbackCount[0].count > 0) {
-        console.log('Using fallback user_id 1 since current user has no transactions');
-        effectiveUserId = 1;
-      }
-    }
-  } catch (err) {
-    console.error('Error checking transaction count:', err);
-  }
+  // Always use the authenticated user's ID - no fallback to other users
+  const effectiveUserId = user_id;
   
   const { period } = req.query;
   
   // Default to last 6 months if period not specified
   const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  
   let startDate, endDate;
   
   switch (period) {
     case 'month':
       // Current month
       startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      endDate = today;
+      endDate = tomorrow;
       break;
     case 'quarter':
       // Last 3 months
       startDate = new Date(today.getFullYear(), today.getMonth() - 3, 1);
-      endDate = today;
+      endDate = tomorrow;
       break;
     case 'year':
       // Last 12 months
       startDate = new Date(today.getFullYear(), today.getMonth() - 12, 1);
-      endDate = today;
+      endDate = tomorrow;
       break;
     default:
       // Default to last 6 months
       startDate = new Date(today.getFullYear(), today.getMonth() - 6, 1);
-      endDate = today;
+      endDate = tomorrow;
   }
   
   // Format dates for SQL
@@ -71,6 +53,14 @@ export async function getReportSummary(req, res) {
   
   try {
     const pool = getPool();
+    
+    // Get user's currency preference
+    const [profileRows] = await pool.query(
+      `SELECT currency_code FROM profiles WHERE user_id = ?`,
+      [user_id]
+    );
+    
+    const userCurrency = profileRows[0]?.currency_code || 'USD';
     
     // Get all available categories first (for fallback)
     const [availableCategories] = await pool.query(
@@ -229,6 +219,7 @@ export async function getReportSummary(req, res) {
     // Format the response
     const response = {
       period,
+      currency: userCurrency,
       date_range: {
         start_date: formattedStartDate,
         end_date: formattedEndDate
@@ -248,6 +239,7 @@ export async function getReportSummary(req, res) {
     // Return a default response structure with empty data
     const defaultResponse = {
       period: period || '6months',
+      currency: userCurrency,
       date_range: {
         start_date: formattedStartDate,
         end_date: formattedEndDate
@@ -273,8 +265,10 @@ export async function getReportSummary(req, res) {
  * Get most expensive categories for a given period
  */
 export async function getExpensiveCategories(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   const { startDate, endDate, limit = 5 } = req.query;
   
@@ -333,8 +327,10 @@ export async function getExpensiveCategories(req, res) {
  * Get monthly comparison data (income vs expenses)
  */
 export async function getMonthlyComparison(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   const { startDate, endDate } = req.query;
   
@@ -375,8 +371,10 @@ export async function getMonthlyComparison(req, res) {
  * Get category-based spending trends over time
  */
 export async function getCategoryTrends(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   const { startDate, endDate, categories } = req.query;
   
@@ -449,38 +447,17 @@ export async function getCategoryTrends(req, res) {
  * Get transaction data for reports based on date range and filters
  */
 export async function getReportData(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   console.log('getReportData called with user_id:', user_id);
   
   const { startDate, endDate, categories } = req.query;
   
-  // Debug: Check if there are any transactions for this user
-  let effectiveUserId = user_id;
-  try {
-    const pool = getPool();
-    const [transactionCount] = await pool.query(
-      'SELECT COUNT(*) as count FROM transactions WHERE user_id = ?',
-      [user_id]
-    );
-    console.log(`Found ${transactionCount[0].count} total transactions for user_id ${user_id}`);
-    
-    // If no transactions, try with user_id = 1 as fallback
-    if (transactionCount[0].count === 0) {
-      const [fallbackCount] = await pool.query(
-        'SELECT COUNT(*) as count FROM transactions WHERE user_id = 1'
-      );
-      console.log(`Found ${fallbackCount[0].count} transactions for fallback user_id 1`);
-      
-      if (fallbackCount[0].count > 0) {
-        console.log('Using fallback user_id 1 since current user has no transactions');
-        effectiveUserId = 1;
-      }
-    }
-  } catch (err) {
-    console.error('Error checking transaction count:', err);
-  }
+  // Always use the authenticated user's ID - no fallback to other users
+  const effectiveUserId = user_id;
   
   // Validate date range
   if (!startDate || !endDate) {
@@ -624,8 +601,10 @@ export async function getReportData(req, res) {
  * Export report data as CSV
  */
 export async function exportReportData(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 2; // Default to user_id 2 for development
+  const user_id = req.user?.user_id;
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
   
   const { startDate, endDate, categories, reportType } = req.query;
   

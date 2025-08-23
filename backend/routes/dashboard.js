@@ -4,8 +4,8 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Authentication temporarily disabled for development
-// router.use(authenticateToken);
+// Authentication enabled for dashboard routes
+router.use(authenticateToken);
 
 // GET /api/dashboard - Get dashboard data (spending breakdown, monthly trends, recent transactions)
 router.get('/', getDashboardData);

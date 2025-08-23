@@ -1,5 +1,6 @@
 import React from 'react';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
+import { TrashIcon } from '@heroicons/react/24/outline';
 
 // Default category colors
 const categoryColors = {
@@ -16,7 +17,7 @@ const categoryColors = {
   Custom: 'bg-gray-100 text-gray-800',
 };
 
-const TransactionList = ({ transactions, currency = '$' }) => {
+const TransactionList = ({ transactions, currency = '$', onDelete = null, showDeleteButton = false }) => {
   // Helper function to safely format dates
   const formatDate = (dateValue) => {
     if (!dateValue) return 'Unknown date';
@@ -82,8 +83,19 @@ const TransactionList = ({ transactions, currency = '$' }) => {
                 </p>
               </div>
             </div>
-            <div className={`text-sm font-medium ${type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
-              {type === 'expense' ? '-' : '+'}{currency}{amount.toLocaleString()}
+            <div className="flex items-center space-x-3">
+              <div className={`text-sm font-medium ${type === 'expense' ? 'text-red-600' : 'text-green-600'}`}>
+                {type === 'expense' ? '-' : '+'}{currency}{amount.toLocaleString()}
+              </div>
+              {showDeleteButton && onDelete && (
+                <button
+                  onClick={() => onDelete(id)}
+                  className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+                  title="Delete transaction"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              )}
             </div>
           </div>
         );

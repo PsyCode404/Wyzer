@@ -36,7 +36,7 @@ export async function completeProfile(req, res) {
         );
       }
     }
-    res.status(200).json({ message: 'Profile completed.', redirect: '/onboarding' });
+    res.status(200).json({ message: 'Profile completed.', redirect: '/dashboard' });
   } catch (err) {
     console.error('Profile completion error:', err);
     res.status(500).json({ message: 'Server error during profile completion.' });
@@ -103,7 +103,7 @@ export async function getUserProfile(req, res) {
       name,
       profilePicture: profile.avatar_url,
       currency: profile.currency_code || 'USD', // Default to USD if not set
-      preferences
+      preferences,
     });
     
   } catch (err) {

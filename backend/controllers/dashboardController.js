@@ -2,18 +2,35 @@ import { getPool } from '../config/db.js';
 
 // Get dashboard data (spending breakdown, monthly trends, recent transactions)
 export async function getDashboardData(req, res) {
-  // For development, handle case when req.user is undefined
-  const user_id = req.user?.user_id || 1; // Default to user_id 1 for development
+  // Get authenticated user ID
+  const user_id = req.user?.user_id;
   
-  // Get date range from query params or use current month
+  if (!user_id) {
+    return res.status(401).json({ message: 'User not authenticated' });
+  }
+  
+  // Get date range from query params or use last 6 months for better data visibility
   const today = new Date();
-  const startDate = req.query.startDate || new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-  const endDate = req.query.endDate || today.toISOString().split('T')[0];
+  // Set end date to tomorrow to include today's transactions
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+  const startDate = req.query.startDate || new Date(today.getFullYear(), today.getMonth() - 5, 1).toISOString().split('T')[0];
+  const endDate = req.query.endDate || tomorrow.toISOString().split('T')[0];
   
   console.log(`Fetching dashboard data for user_id: ${user_id}, period: ${startDate} to ${endDate}`);
   
   try {
     const pool = getPool();
+    
+    // Get user's profile data (name and currency)
+    const [profileRows] = await pool.query(
+      `SELECT first_name, last_name, currency_code FROM profiles WHERE user_id = ?`,
+      [user_id]
+    );
+    
+    const userProfile = profileRows[0] || {};
+    const userDisplayName = [userProfile.first_name, userProfile.last_name].filter(Boolean).join(' ') || 'User';
+    const userCurrency = userProfile.currency_code || 'USD';
     
     // 1. Get spending breakdown by category
     const [spendingBreakdown] = await pool.query(
@@ -67,9 +84,18 @@ export async function getDashboardData(req, res) {
       net: month.income - month.expenses
     }));
     
-    // 3. Get recent transactions (last 5)
+    // 3. Get recent transactions (last 5) - no date filter for recent transactions
     const [recentTransactions] = await pool.query(
-      `SELECT t.*, c.name as category_name, c.color as category_color, c.icon as category_icon
+      `SELECT 
+        t.transaction_id,
+        t.amount,
+        t.type,
+        t.description,
+        DATE_FORMAT(t.date, '%Y-%m-%d') as date,
+        t.created_at,
+        c.name as category_name, 
+        c.color as category_color, 
+        c.icon as category_icon
       FROM transactions t
       LEFT JOIN categories c ON t.category_id = c.category_id
       WHERE t.user_id = ?
@@ -123,6 +149,10 @@ export async function getDashboardData(req, res) {
     
     // Combine all data
     const dashboardData = {
+      user: {
+        name: userDisplayName,
+        currency: userCurrency
+      },
       spending_breakdown: {
         categories: categoriesWithPercentage.map(cat => ({
           name: cat.name,
@@ -153,8 +183,12 @@ export async function getDashboardData(req, res) {
 // Get user's budget
 export async function getUserBudget(req, res) {
   try {
-    // For development, handle case when req.user is undefined
-    const user_id = req.user?.user_id || 1; // Default to user_id 1 for development
+    // Get authenticated user ID
+    const user_id = req.user?.user_id;
+    
+    if (!user_id) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
     
     // Get current month in YYYY-MM format
     const today = new Date();
@@ -190,11 +224,11 @@ export async function getUserBudget(req, res) {
     
     // Get user's profile for currency preference
     const [profiles] = await pool.query(
-      `SELECT currency FROM user_profiles WHERE user_id = ?`,
+      `SELECT currency_code FROM profiles WHERE user_id = ?`,
       [user_id]
     );
     
-    const currency = profiles.length > 0 ? profiles[0].currency : '$';
+    const currency = profiles.length > 0 ? profiles[0].currency_code : 'USD';
     
     // If no budget found, return default
     if (budgets.length === 0) {
@@ -219,7 +253,7 @@ export async function getUserBudget(req, res) {
     return res.status(200).json({
       totalBudget: 0,
       budgets: [],
-      currency: '$',
+      currency: 'USD',
       error: 'Failed to fetch budget data, using default values'
     });
   }

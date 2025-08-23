@@ -11,8 +11,8 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Authentication temporarily disabled for development
-// router.use(authenticateToken);
+// Enable authentication for reports
+router.use(authenticateToken);
 
 // GET /api/reports - Get report data (legacy endpoint)
 router.get('/', getReportData);

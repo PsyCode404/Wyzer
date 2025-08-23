@@ -22,7 +22,7 @@ services:
       - key: DB_PORT
         value: 3306
       - key: JWT_SECRET
-        value: your-secret-key-here
+        value: 636fc830f8d08b90cf240dac53caca16
 
   # Frontend Service (Static Site)
   - type: web

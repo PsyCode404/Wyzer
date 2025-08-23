@@ -1,23 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { PlusIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, ArrowPathIcon, EyeIcon } from '@heroicons/react/24/outline';
 import Navbar from '../components/Navbar';
 import DashboardCard from '../components/DashboardCard';
 import BudgetProgress from '../components/BudgetProgress';
 import TransactionList from '../components/TransactionList';
 import { getDashboardData, getUserBudget } from '../utils/dashboardApi';
+import { deleteTransaction } from '../utils/transactionApi';
 import eventBus, { EVENTS } from '../utils/eventBus';
 
 // Empty initial states for dashboard data - will be populated from API
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
+  
   // State for dashboard data
   const [spendingData, setSpendingData] = useState([]);
   const [monthlyData, setMonthlyData] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [summary, setSummary] = useState({ totalIncome: 0, totalExpenses: 0, netSavings: 0 });
   const [budget, setBudget] = useState({ totalBudget: 0, currency: '$' });
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   
@@ -103,21 +107,44 @@ const DashboardPage = () => {
       fetchDashboardData();
     };
     
-    // Subscribe to transaction events
-    const unsubscribe = eventBus.subscribe(EVENTS.TRANSACTION_UPDATED, handleTransactionUpdate);
+    // Subscribe to multiple transaction events for real-time updates
+    const unsubscribeUpdated = eventBus.subscribe(EVENTS.TRANSACTION_UPDATED, handleTransactionUpdate);
+    const unsubscribeCreated = eventBus.subscribe(EVENTS.TRANSACTION_CREATED, handleTransactionUpdate);
+    const unsubscribeDeleted = eventBus.subscribe(EVENTS.TRANSACTION_DELETED, handleTransactionUpdate);
     
-    // Clean up subscription when component unmounts
-    return () => unsubscribe();
+    // Clean up subscriptions when component unmounts
+    return () => {
+      unsubscribeUpdated();
+      unsubscribeCreated();
+      unsubscribeDeleted();
+    };
   }, []); // Empty dependency array means this runs once on mount
   
   // Extract values with fallbacks to prevent undefined errors
   const currency = budget?.currency || '$';
-  const totalBudget = budget?.totalBudget || 5000;
+  const totalBudget = budget?.totalBudget || 0;
   const spentAmount = summary?.totalExpenses || summary?.total_expenses || 0;
 
-  // Function to manually refresh dashboard data
-  const handleRefresh = () => {
-    setLastRefresh(new Date());
+
+  // Handle delete transaction from dashboard
+  const handleDeleteTransaction = async (transactionId) => {
+    if (window.confirm('Are you sure you want to delete this transaction?')) {
+      try {
+        await deleteTransaction(transactionId);
+        
+        // Notify other components that a transaction has been deleted
+        eventBus.publish(EVENTS.TRANSACTION_DELETED, {
+          transactionId,
+          timestamp: new Date().toISOString()
+        });
+        
+        // Refresh dashboard data
+        fetchDashboardData();
+      } catch (error) {
+        console.error('Error deleting transaction:', error);
+        setError('Failed to delete transaction. Please try again.');
+      }
+    }
   };
 
   const QuickActionButton = ({ icon: Icon, label, onClick }) => (
@@ -150,7 +177,7 @@ const DashboardPage = () => {
             </button>
             <button
               className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-800"
-              onClick={() => setLastRefresh(new Date())}
+              onClick={() => navigate('/transactions')}
             >
               <PlusIcon className="h-4 w-4" />
               Add Transaction
@@ -244,17 +271,17 @@ const DashboardPage = () => {
             <QuickActionButton
               icon={PlusIcon}
               label="Add Income"
-              onClick={() => {}}
+              onClick={() => navigate('/transactions?type=income')}
             />
             <QuickActionButton
               icon={PlusIcon}
               label="Add Expense"
-              onClick={() => {}}
+              onClick={() => navigate('/transactions?type=expense')}
             />
             <QuickActionButton
-              icon={PlusIcon}
+              icon={EyeIcon}
               label="View All Transactions"
-              onClick={() => {}}
+              onClick={() => navigate('/transactions')}
             />
           </DashboardCard>
 
@@ -264,6 +291,8 @@ const DashboardPage = () => {
               <TransactionList
                 transactions={recentTransactions}
                 currency={currency}
+                onDelete={handleDeleteTransaction}
+                showDeleteButton={true}
               />
             ) : (
               <div className="py-4 text-center text-gray-500 italic">
@@ -278,9 +307,9 @@ const DashboardPage = () => {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex justify-between text-sm text-gray-600">
             <div className="space-x-4">
-              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
-              <a href="#" className="hover:text-primary transition-colors">Contact Us</a>
+              <button className="hover:text-primary transition-colors">Privacy Policy</button>
+              <button className="hover:text-primary transition-colors">Terms of Service</button>
+              <button className="hover:text-primary transition-colors">Contact Us</button>
             </div>
             <div>© 2025 Wyzer. All rights reserved.</div>
           </div>

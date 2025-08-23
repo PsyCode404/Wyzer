@@ -306,9 +306,9 @@ const effectiveReportData = reportData;
           })),
           monthlyComparison: summaryData.monthly_spending.map(item => ({
             month: item.month_name,
-            income: item.income,
-            expenses: item.expenses,
-            net: item.net
+            income: parseFloat(item.income || 0),
+            expenses: parseFloat(item.expenses || 0),
+            net: parseFloat(item.net || 0)
           })),
           // Transform category trends data for the trends chart
           dailyTrends: summaryData.category_trends.flatMap(month => 
@@ -395,16 +395,6 @@ const effectiveReportData = reportData;
     // Ensure we have valid data
     if (!effectiveReportData.categorySpending || effectiveReportData.categorySpending.length === 0) {
       console.warn('No category spending data available');
-      
-      // Generate sample data for testing if no real data is available
-      if (allCategories && allCategories.length > 0) {
-        console.log('Generating sample category data for chart testing');
-        return allCategories.slice(0, 5).map((category, index) => ({
-          name: category.name,
-          value: 1000 - (index * 150), // Generate some sample values
-          color: category.color
-        }));
-      }
       return [];
     }
     
@@ -423,18 +413,10 @@ const effectiveReportData = reportData;
   
   // Prepare data for income vs expenses bar chart
   const getComparisonData = () => {
-    // Ensure we have valid data
+    // Only return real data - no sample data
     if (!effectiveReportData.monthlyComparison || effectiveReportData.monthlyComparison.length === 0) {
       console.warn('No monthly comparison data available');
-      
-      // Generate sample data for testing if no real data is available
-      console.log('Generating sample comparison data for chart testing');
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-      return months.map(month => ({
-        month,
-        income: 1000 + Math.random() * 500,
-        expenses: 800 + Math.random() * 400
-      }));
+      return [];
     }
     
     return effectiveReportData.monthlyComparison.map(item => ({
@@ -446,37 +428,9 @@ const effectiveReportData = reportData;
   
   // Prepare data for monthly trends line chart
   const getTrendsData = () => {
-    // Ensure we have valid data
+    // Only return real data - no sample data
     if (!effectiveReportData.dailyTrends || effectiveReportData.dailyTrends.length === 0) {
       console.warn('No daily trends data available');
-      
-      // Generate sample data for testing if no real data is available
-      if (allCategories && allCategories.length > 0) {
-        console.log('Generating sample trends data for chart testing');
-        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-        const sampleCategories = allCategories.slice(0, 3); // Use first 3 categories
-        
-        let sampleData = [];
-        months.forEach(month => {
-          sampleCategories.forEach(category => {
-            sampleData.push({
-              date: month,
-              category: category.name,
-              amount: 200 + Math.random() * 300,
-              color: category.color
-            });
-          });
-        });
-        
-        // If we have selected categories, filter the sample data
-        if (selectedCategories.length > 0) {
-          sampleData = sampleData.filter(item => 
-            selectedCategories.includes(item.category)
-          );
-        }
-        
-        return sampleData;
-      }
       return [];
     }
     
@@ -708,7 +662,7 @@ const effectiveReportData = reportData;
 
         {/* Report Controls */}
         <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Report Type Selection */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -748,46 +702,6 @@ const effectiveReportData = reportData;
                   </option>
                 ))}
               </select>
-            </div>
-
-            {/* Category Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Categories
-              </label>
-              <div className="space-y-2">
-                {allCategories && allCategories.length > 0 ? (
-                  allCategories.map((category) => (
-                    <label key={category.name || category.category_id} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={selectedCategories.includes(category.name)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedCategories([...selectedCategories, category.name]);
-                          } else {
-                            setSelectedCategories(
-                              selectedCategories.filter((c) => c !== category.name)
-                            );
-                          }
-                        }}
-                        className="form-checkbox h-4 w-4 text-primary rounded"
-                      />
-                      <span 
-                        className="ml-2 text-sm text-gray-700 capitalize flex items-center"
-                      >
-                        <span 
-                          className="inline-block w-3 h-3 rounded-full mr-1" 
-                          style={{ backgroundColor: category.color || '#808080' }}
-                        ></span>
-                        {category.name}
-                      </span>
-                    </label>
-                  ))
-                ) : (
-                  <p className="text-sm text-gray-500">Loading categories...</p>
-                )}
-              </div>
             </div>
           </div>
         </div>

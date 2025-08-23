@@ -83,7 +83,7 @@ async function apiRequest(endpoint, method = 'GET', data = null) {
 
 // Helper function to provide empty data structures for different endpoints when API calls fail
 function getDefaultDataForEndpoint(endpoint) {
-  console.log(`Returning empty data structure for endpoint: ${endpoint}`);
+  console.log(`API call failed for endpoint: ${endpoint} - returning empty data`);
   
   // Return appropriate empty data structure based on the endpoint
   if (endpoint.includes('/dashboard')) {
@@ -104,10 +104,9 @@ function getDefaultDataForEndpoint(endpoint) {
     return {
       totalBudget: 0,
       budgets: [],
-      currency: '$'
+      currency: 'USD'
     };
   } else {
-    // Default empty response
     return {
       data: [],
       total: 0
@@ -119,13 +118,10 @@ function getDefaultDataForEndpoint(endpoint) {
 export async function getDashboardData() {
   console.log('Getting dashboard data');
   
-  // Get current date and first day of current month
+  // Get current date and last 6 months for better data visibility
   const today = new Date();
-  const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  
-  const startDate = startOfMonth.toISOString().split('T')[0];
-  const endDate = endOfMonth.toISOString().split('T')[0];
+  const startDate = new Date(today.getFullYear(), today.getMonth() - 5, 1).toISOString().split('T')[0];
+  const endDate = today.toISOString().split('T')[0];
   
   try {
     console.log(`Fetching dashboard data for period: ${startDate} to ${endDate}`);
@@ -141,7 +137,7 @@ export async function getDashboardData() {
     }
     
     // If we have spending breakdown data
-    if (dashboardData.spending_breakdown) {
+    if (dashboardData.spending_breakdown && dashboardData.spending_breakdown.categories) {
       console.log('Raw spending breakdown data:', dashboardData.spending_breakdown);
       
       // Format spending data for pie chart
@@ -158,25 +154,27 @@ export async function getDashboardData() {
       console.log('Formatted spending data for chart:', spendingData);
       
       // Format monthly trends data
-      const monthlyData = dashboardData.monthly_trends.map(month => ({
-        name: month.month_name.substring(0, 3), // Just use first 3 chars of month name
-        month: month.month,
-        income: month.income,
-        expenses: month.expenses,
-        net: month.net
-      }));
+      const monthlyData = Array.isArray(dashboardData.monthly_trends) ? 
+        dashboardData.monthly_trends.map(month => ({
+          name: month.month_name ? month.month_name.substring(0, 3) : 'Unknown',
+          month: month.month,
+          income: parseFloat(month.income) || 0,
+          expenses: parseFloat(month.expenses) || 0,
+          net: parseFloat(month.net) || 0
+        })) : [];
       
       // Format recent transactions
-      const recentTransactions = dashboardData.recent_transactions.map(transaction => ({
-        id: transaction.transaction_id,
-        description: transaction.description,
-        amount: transaction.amount,
-        category: transaction.category_name || 'Uncategorized',
-        category_color: transaction.category_color,
-        type: transaction.transaction_type,
-        date: new Date(transaction.transaction_date),
-        payment_method: transaction.payment_method
-      }));
+      const recentTransactions = Array.isArray(dashboardData.recent_transactions) ? 
+        dashboardData.recent_transactions.map(transaction => ({
+          id: transaction.transaction_id,
+          description: transaction.description,
+          amount: parseFloat(transaction.amount) || 0,
+          category: transaction.category_name || 'Uncategorized',
+          category_color: transaction.category_color,
+          type: transaction.type,
+          date: transaction.date,
+          payment_method: transaction.payment_method
+        })) : [];
       
       // Return formatted dashboard data
       return {

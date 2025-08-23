@@ -75,6 +75,32 @@ CREATE TABLE IF NOT EXISTS `categories` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -----------------------------------------------------
+-- Table `budgets`
+-- Stores user budget allocations by category and period
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `budgets` (
+  `budget_id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NOT NULL,
+  `category_id` INT NULL,
+  `period` VARCHAR(7) NOT NULL, -- YYYY-MM format
+  `amount` DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`budget_id`),
+  UNIQUE KEY `unique_user_category_period` (`user_id`, `category_id`, `period`),
+  CONSTRAINT `fk_budgets_users`
+    FOREIGN KEY (`user_id`)
+    REFERENCES `users` (`user_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE,
+  CONSTRAINT `fk_budgets_categories`
+    FOREIGN KEY (`category_id`)
+    REFERENCES `categories` (`category_id`)
+    ON DELETE CASCADE
+    ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- -----------------------------------------------------
 -- Table `transactions`
 -- Stores all financial transactions
 -- -----------------------------------------------------

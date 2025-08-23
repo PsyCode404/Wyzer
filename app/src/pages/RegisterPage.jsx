@@ -11,6 +11,7 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { register } from '../utils/api';
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -43,39 +44,31 @@ const RegisterPage = () => {
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       setStatus(undefined);
       try {
-        // Step 1: Make the API call directly without dynamic imports
-        const response = await fetch('http://localhost:5000/api/auth/register', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: values.fullName,
-            email: values.email,
-            password: values.password
-          })
+        // Step 1: Make the API call using the imported utility
+        const response = await register({
+          name: values.fullName,
+          email: values.email,
+          password: values.password
         });
         
-        // Step 2: Parse the response
-        const data = await response.json();
-        console.log('Registration response:', data);
-        
-        // Step 3: Handle success or failure
-        if (data.token) {
-          // Step 4: Set the token in localStorage directly
-          localStorage.setItem('token', data.token);
+        // Step 2: Handle success or failure
+        if (response.token) {
+          // Step 3: Set the token in localStorage directly
+          localStorage.setItem('token', response.token);
           localStorage.setItem('email', values.email);
           
-          // Step 5: Log success and redirect
+          // Step 4: Log success and redirect
           console.log('Registration successful! Redirecting...');
           
           // Use the most direct form of navigation
           setTimeout(() => {
-            window.location.replace('/onboarding');
+            window.location.replace('/dashboard');
           }, 100);
           
           return; // Stop execution here
         } else {
           // Handle error from server
-          setStatus(data.message || 'Registration failed. Please try again.');
+          setStatus(response.message || 'Registration failed. Please try again.');
         }
       } catch (err) {
         console.error('Registration error:', err);

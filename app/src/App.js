@@ -2,7 +2,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import PageTransition from './components/PageTransition';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import OnboardingPage from './pages/OnboardingPage';
 import DashboardPage from './pages/DashboardPage';
 import TransactionPage from './pages/TransactionPage';
 import RecurringTransactionsPage from './pages/RecurringTransactionsPage';
@@ -24,6 +23,7 @@ const PrivateRoute = ({ children }) => {
   return <PageTransition>{children}</PageTransition>;
 };
 
+
 function App() {
   return (
     <AuthProvider>
@@ -31,14 +31,13 @@ function App() {
         <Routes>
           <Route path="/login" element={<PageTransition><LoginPage /></PageTransition>} />
           <Route path="/register" element={<PageTransition><RegisterPage /></PageTransition>} />
-          <Route path="/onboarding" element={<OnboardingPage />} />
-          <Route path="/dashboard" element={<PageTransition><DashboardPage /></PageTransition>} />
-          <Route path="/transactions" element={<PageTransition><TransactionPage /></PageTransition>} />
-          <Route path="/recurring" element={<PageTransition><RecurringTransactionsPage /></PageTransition>} />
-          <Route path="/reports" element={<PageTransition><ReportsPage /></PageTransition>} />
-          <Route path="/categories" element={<PageTransition><CategoriesPage /></PageTransition>} />
-          <Route path="/profile" element={<PageTransition><ProfilePage /></PageTransition>} />
-          <Route path="/settings" element={<PageTransition><SettingsPage /></PageTransition>} />
+          <Route path="/dashboard" element={<PrivateRoute><DashboardPage /></PrivateRoute>} />
+          <Route path="/transactions" element={<PrivateRoute><TransactionPage /></PrivateRoute>} />
+          <Route path="/recurring" element={<PrivateRoute><RecurringTransactionsPage /></PrivateRoute>} />
+          <Route path="/reports" element={<PrivateRoute><ReportsPage /></PrivateRoute>} />
+          <Route path="/categories" element={<PrivateRoute><CategoriesPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
           <Route path="/test-redirect" element={<TestRedirectPage />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>

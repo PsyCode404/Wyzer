@@ -106,7 +106,7 @@ export async function loginUser(req, res) {
         token, 
         user_id: user.user_id,
         email: user.email,
-        redirect: '/onboarding' 
+        redirect: '/dashboard'
       });
     } catch (bcryptError) {
       console.error('Bcrypt comparison error:', bcryptError);

@@ -14,8 +14,8 @@ import { authenticateToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Authentication temporarily disabled for development
-// router.use(authenticateToken);
+// Authentication middleware
+router.use(authenticateToken);
 
 // GET /api/transactions - Get all transactions with filtering
 router.get('/', getTransactions);

@@ -11,10 +11,11 @@ import {
 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { login } from '../utils/api';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login: authLogin } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
@@ -35,62 +36,25 @@ const LoginPage = () => {
       try {
         console.log('Attempting login with:', { email: values.email });
         
-        // Step 1: Make the API call
-        const response = await fetch('http://localhost:5000/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: values.email,
-            password: values.password
-          })
+        // Step 1: Make the API call using the imported utility
+        const data = await login({
+          email: values.email,
+          password: values.password
         });
         
-        console.log('Login response status:', response.status);
+        console.log('Login response data:', data);
         
-        // Step 2: Handle non-200 responses before trying to parse JSON
-        if (!response.ok) {
-          let errorMessage = 'Login failed';
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-          } catch (parseError) {
-            console.error('Error parsing error response:', parseError);
-            errorMessage = `Server error (${response.status})`;
-          }
+        // Step 2: Handle success or failure
+        if (data.token) {
+          // Update auth context
+          await authLogin(data.token, values.email);
           
-          console.error('Login failed:', errorMessage);
-          setStatus(errorMessage);
-          return;
-        }
-        
-        // Step 3: Parse the successful response
-        try {
-          const data = await response.json();
-          console.log('Login response data:', data);
-          
-          // Step 4: Handle success
-          if (data.token) {
-            // Store token and user info
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('email', values.email);
-            localStorage.setItem('user_id', data.user_id);
-            
-            // Update auth context
-            const authResult = await login(values.email, values.password);
-            console.log('Auth context login result:', authResult);
-            
-            // Log success and redirect
-            console.log('Login successful! Redirecting...');
-            navigate('/onboarding');
-          } else {
-            // Handle missing token in response
-            const errorMsg = 'Invalid server response - no authentication token received';
-            console.error(errorMsg);
-            setStatus(errorMsg);
-          }
-        } catch (jsonError) {
-          console.error('Error parsing JSON response:', jsonError);
-          setStatus('Error processing server response');
+          // Log success and redirect
+          console.log('Login successful! Redirecting...');
+          navigate('/dashboard');
+        } else {
+          // Handle error from server
+          setStatus(data.message || 'Login failed. Please try again.');
         }
       } catch (err) {
         console.error('Login error details:', err);

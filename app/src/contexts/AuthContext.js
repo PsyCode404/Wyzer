@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
     return token ? { token, email } : null;
   });
 
-  const login = (token, email) => {
+  const login = async (token, email) => {
     localStorage.setItem('token', token);
     localStorage.setItem('email', email);
     setUser({ token, email });
@@ -21,33 +21,9 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  // Save user preferences during onboarding
-  const savePreferences = async (preferences) => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch('http://localhost:5000/api/onboarding/preferences', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(preferences)
-      });
-
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-      throw error;
-    }
-  };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, savePreferences }}>
+    <AuthContext.Provider value={{ user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
