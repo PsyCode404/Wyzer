@@ -39,6 +39,7 @@ function App() {
           <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
           <Route path="/settings" element={<PrivateRoute><SettingsPage /></PrivateRoute>} />
           <Route path="/test-redirect" element={<TestRedirectPage />} />
+          <Route path="/onboarding" element={<Navigate to="/dashboard" replace />} />
           <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>

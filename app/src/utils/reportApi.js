@@ -1,7 +1,9 @@
 // Wyzer API utility for reports data
-// Hardcode the API base URL to ensure it's connecting to the correct backend server
-const API_BASE = 'http://localhost:5000/api';
-console.log('Reports API using hardcoded base URL:', API_BASE);
+// Use environment-based API URL for production compatibility
+const API_BASE = process.env.NODE_ENV === 'development' 
+  ? 'http://localhost:5000/api' 
+  : process.env.REACT_APP_API_URL || '/api';
+console.log('Reports API using base URL:', API_BASE);
 
 // Helper function to handle API requests
 async function apiRequest(endpoint, method = 'GET', data = null) {
