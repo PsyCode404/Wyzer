@@ -13,6 +13,8 @@ RUN cd frontend && npm ci
 
 # Copy frontend source and build
 COPY app/ ./frontend/
+# Set production API URL for React build
+ENV REACT_APP_API_URL=https://wyzer.onrender.com
 RUN cd frontend && npm run build
 
 # Copy backend package files and install dependencies  
