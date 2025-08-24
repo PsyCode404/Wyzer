@@ -90,13 +90,21 @@ app.get('/api/healthz', (_req, res) => {
   });
 });
 
-// Root endpoint
-app.get('/', (_req, res) => {
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, 'build')));
+
+// Root endpoint for API info
+app.get('/api', (_req, res) => {
   res.json({ 
     message: 'Wyzer Backend API',
     status: 'running',
     endpoints: ['/api/auth', '/api/profile', '/api/transactions', '/api/categories', '/api/recurring', '/api/reports', '/api/dashboard']
   });
+});
+
+// Catch-all handler: send back React's index.html file for client-side routing
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });
 
 // Global error handler – must be defined AFTER route declarations
