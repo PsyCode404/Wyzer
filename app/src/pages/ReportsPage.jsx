@@ -145,7 +145,10 @@ const effectiveReportData = reportData;
     const fetchCategories = async () => {
       try {
         console.log('Fetching all categories for dropdown...');
-        const response = await fetch('http://localhost:5000/api/categories');
+        const API_BASE = process.env.REACT_APP_API_URL 
+          ? `${process.env.REACT_APP_API_URL}/api`
+          : 'http://localhost:5000/api';
+        const response = await fetch(`${API_BASE}/categories`);
         if (!response.ok) {
           throw new Error(`Failed to fetch categories: ${response.status}`);
         }

@@ -200,7 +200,7 @@ const ProfilePage = () => {
                   <img
                     src={formik.values.profilePicture.startsWith('data:') || formik.values.profilePicture.startsWith('http') 
                       ? formik.values.profilePicture 
-                      : `http://localhost:5000${formik.values.profilePicture}`}
+                      : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${formik.values.profilePicture}`}
                     alt="Profile"
                     className="w-full h-full object-cover"
                     onError={(e) => {
