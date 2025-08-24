@@ -1,31 +1,32 @@
-# Full-stack Dockerfile for single Render web service
+# Simplified full-stack Dockerfile
 FROM node:18-alpine
 
-# Install curl for health checks
+# Install curl
 RUN apk add --no-cache curl
 
 # Set working directory
-WORKDIR /app
+WORKDIR /usr/src/app
 
-# Copy and build frontend first
+# Copy frontend package files and install dependencies
 COPY app/package*.json ./frontend/
-WORKDIR /app/frontend
-RUN npm ci
-COPY app/ ./
-RUN npm run build
+RUN cd frontend && npm ci
 
-# Copy and setup backend
-WORKDIR /app
+# Copy frontend source and build
+COPY app/ ./frontend/
+RUN cd frontend && npm run build
+
+# Copy backend package files and install dependencies  
 COPY backend/package*.json ./
 RUN npm ci --only=production
+
+# Copy backend source
 COPY backend/ ./
 
-# Copy frontend build to backend's expected location
-RUN mkdir -p /app/build
-RUN cp -r /app/frontend/build/* /app/build/
+# Move frontend build to expected location
+RUN mkdir -p build && cp -r frontend/build/* build/
 
 # Expose port
 EXPOSE 10000
 
-# Start the backend (which will serve both API and frontend)
+# Start server
 CMD ["node", "server.js"]
