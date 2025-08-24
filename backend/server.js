@@ -73,9 +73,17 @@ app.use('/api/recurring', recurringTransactionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 
-// Health check endpoint
+// Health check endpoints
 app.get('/api/health', (_req, res) => {
-  res.status(200).json({ 
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+app.get('/api/healthz', (_req, res) => {
+  res.status(200).json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || 'development'
