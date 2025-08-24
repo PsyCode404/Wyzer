@@ -100,16 +100,18 @@ app.use((err, _req, res, _next) => {
   });
 });
 
-// Start server after DB connection
-connectDB()
-  .then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Server is running on port ${PORT}`);
-      console.log(`API available at http://localhost:${PORT}/api`);
-      console.log(`Frontend available at http://localhost:${PORT}`);
+// Start server immediately, connect to DB in background
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server is running on port ${PORT}`);
+  console.log(`API available at http://localhost:${PORT}/api`);
+  console.log(`Frontend available at http://localhost:${PORT}`);
+  
+  // Connect to database after server starts
+  connectDB()
+    .then(() => {
+      console.log('✅ Database connected successfully');
+    })
+    .catch((err) => {
+      console.error('⚠️ Database connection failed (server still running):', err);
     });
-  })
-  .catch((err) => {
-    console.error('Failed to connect to DB:', err);
-    process.exit(1);
-  });
+});
