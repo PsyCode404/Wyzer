@@ -2,11 +2,7 @@
 -- This script creates and initializes the database for Wyzer, a personal finance and budget tracking application
 -- Created: April 24, 2025
 
--- Create database if it doesn't exist
-CREATE DATABASE IF NOT EXISTS wyzer;
-
--- Use the wyzer database
-USE wyzer;
+-- Note: Using existing gnidi_wyzer database (no CREATE DATABASE needed)
 
 -- -----------------------------------------------------
 -- Table `users`
